@@ -27,6 +27,65 @@ class text:
 display_text = text("start game?") #text
 cmap = colors.ListedColormap(['green','blue']) #colormap
 
+#unit creation
+    #creation of infantry
+infantry = np.array([2,10,1,1,10])
+        #in the array [Movement,HP,Attack range, Attack damage, morale ]
+        
+    #creation of arhcers
+archers = np.array([3,5,3,1,5])
+    
+    #creation of cavalry
+cavalry = np.array([4,10,1,3,15])
+    
+    #creation of general
+general = np.array([4,15,1,2,10]) #same movement as cavalary
+    
+    #creation of artillery
+arty = np.array([1,5,5,5,5])
+
+#player selects thier units
+def unit_selection(infantry, archers, cavalry, general, arty):
+    
+    #displays unit information
+    print('-'*50, "\nYou have a maximum of 10 uinits plus a general!\nThe Stats for each unit are sorted accordingly: --> [Movement,Health Pits ,Attack Range, Attack damage, Morale ]",'-'*50)
+    picking = 1
+    user_army = np.array([" "," "," "," "," "," "," "," "," "," "])
+    while picking != 'y':
+        #user picks units
+        for i in range(0,10):
+            print("1. Infantry:", infantry)
+            print("2. Archers:", archers)
+            print("3. Cavalry:", cavalry)
+            print("4. Artillery:", arty)
+            choice = input(f"You are chosing your {i+1} unit.\nEnter the corresponding number for the unit you want:")
+
+            if choice == 1:
+                user_army[i] = "Infantry"
+
+            elif choice == 2:
+                user_army[i] = "Archers"
+                
+            elif choice == 3:
+                user_army[i] = "Cavalry"
+                
+            elif choice == 4:
+                user_army[i] = "Artillery"
+            
+        # displays user army
+        print(user_army[3])
+        
+        choice = input("If you are done selecting your army press y:")
+        
+        '''
+        if choice == 'y':
+            picking = 'y'
+        else:
+            #sends player to placement area
+            '''
+
+    
+    
 #Main Menu
 def Game_menu():
     #Creats a figure of the axes object (A)
@@ -44,7 +103,7 @@ def Game_menu():
     startgame = input("Press y to start game: ")
     if(startgame == "y"):
         display_text.message = None
-        Game_menu()
+        unit_selection(infantry, archers, cavalry, general, arty)
     else:
         sys.exit("Exiting game")
         
