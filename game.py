@@ -10,7 +10,7 @@ Created on Tue Feb 20 01:15:04 2024
 #moduels 
 import numpy as np
 import matplotlib.pyplot as plt
-import sys
+import sys 
 from matplotlib import colors
 
 # other files
@@ -23,6 +23,8 @@ gamemap = mainmap.game_map
 class text:
     def __init__(self, message):
         self.message = message
+#Constant
+a = 11
 
 #lists 
 
@@ -33,6 +35,10 @@ user_army = np.array([[0],
                      [0],
                      [0],
                      [0]])
+
+#Creates individul cohort in np.array 
+cohort_num = 0
+user_cohort = np.zeros((cohort_num,7), dtype = int)
 
 #array for enemy army
 enemy_army = np.array([[0],
@@ -47,8 +53,8 @@ display_text = text("start game?") #text
 #colormap. Based on the number on the mainmap array, paint the color of the tiles
 #0 = grass(green)
 #1-5 = friendly troops (cyan)
-#6 = river (blue)
-cmap = colors.ListedColormap(['green','cyan', 'cyan', 'cyan', 'cyan', 'cyan','blue'])
+#6-10 = enemy (red)
+cmap = colors.ListedColormap(['green','cyan', 'cyan', 'cyan', 'cyan', 'cyan','red', 'red', 'red', 'red', 'red'])
 
 
 #unit creation
@@ -69,7 +75,13 @@ general = np.array([4,15,1,2,10]) #same movement as cavalary
     #creation of artillery
 arty = np.array([1,5,5,5,5])
 
-
+#Unit list
+#stores the units and their stats in to an array, used for movement and combat
+unit_list = np.array([infantry,
+                     archers, 
+                     cavalry, 
+                     general, 
+                     arty])
 
 
 
@@ -86,7 +98,7 @@ def unit_selection(infantry, archers, cavalry, general, arty):
         #Since you add a general automatically I removed this so that the player doesn't add in an extra
         
         #user picks units
-    for i in range(0,10):
+    for i in range(0,5):
         choice = int(input(f"\nYou are chosing your unit {i+1}.\nEnter the corresponding number for the unit you want:"))
         #I change it into ints own function so that i can make the error check easier
         unitpick(choice)
@@ -98,7 +110,7 @@ def unit_selection(infantry, archers, cavalry, general, arty):
         
     showarmy()
         
-    print("Are you done making your amry?")
+    print("Are you done making your army?")
     choice = check()
     if choice == True:
         unit_placement()
@@ -164,7 +176,6 @@ def unit_placement():
 
 
 
-
 #army size
 def armysize(choice_type):
     
@@ -189,7 +200,20 @@ def armysize(choice_type):
             for i in range(number_rows):
                 for j in range(number_columns):
                     gamemap[50-number_rowlocation-i][number_columnlocation-j] = choice_type
-    
+                    
+            #adds this squadron of army into a source cohort_num as an instance variable
+            global cohort_num 
+            global user_cohort
+            cohort_num += 1
+            user_cohort = np.resize(user_cohort, (cohort_num,7))
+            user_cohort[cohort_num-1][0] = cohort_num
+            user_cohort[cohort_num-1][1] = choice_type
+            user_cohort[cohort_num-1][2] = number_rowlocation
+            user_cohort[cohort_num-1][3] = number_columnlocation
+            user_cohort[cohort_num-1][4] = number_rows
+            user_cohort[cohort_num-1][5] = number_columns
+            user_cohort[cohort_num-1][6] = unit_list[choice_type-1,0]
+        
     user_army[choice_type-1][0] = user_army[choice_type-1][0] - number_rows*number_columns
     mapdraw()
     showarmy()
@@ -212,15 +236,120 @@ def armysize(choice_type):
     elif answer == False and nomore_units == False:
         #you still have units to place
         print("You still have units to place")#temporary
-
+        unit_placement()
     
     elif answer == False and nomore_units == True:
         #goes to battle field
-        print("You will go to the battle field")#temporary
+        print("\033[H\033[J")#clears the console
+        print("Welcome to the battle field! \nYour army has been prepared General!\nEach cohort will be represented by their " 
+                ,"\n[cohort number, type, left top row, left top colomun, length, width, movement point]\n")
+        gameplay()
 
     
     
-       
+#Gameplay, where the player makes all the important decisions on where the move the unit, and how the enemy ai moves
+def gameplay():
+    
+    print(user_cohort)
+    cohort_selection = int(input("\nSelect a cohort (The first number on the matrix) with movements left (last number on the matrix)"))
+    if(user_cohort[cohort_selection-1][6] != 0):
+        
+        input_movement = int(input(f"select movement amount, this cohort has {user_cohort[cohort_selection-1][6]} left: "))
+        input_direction = str(input("which direction shall this cohort move: up, down, left, right?: "))
+
+        if(input_direction == "up"):
+            movement = user_cohort[cohort_selection-1][2]+input_movement
+            tile_movement(cohort_selection,movement,input_direction)
+            
+        elif(input_direction == "down"):
+            movement = user_cohort[cohort_selection-1][2]-input_movement
+            tile_movement(cohort_selection,movement,input_direction)
+            
+        elif(input_direction == "left"):
+            movement = user_cohort[cohort_selection-1][3]-input_movement
+            tile_movement(cohort_selection,movement,input_direction)
+            
+        elif(input_direction == "right"):
+            movement = user_cohort[cohort_selection-1][3]+input_movement
+            tile_movement(cohort_selection,movement,input_direction)
+        
+        user_cohort[cohort_selection-1][6] = user_cohort[cohort_selection-1][6] - input_movement
+        
+        print("Do you want to continue to move your cohorts?")
+        more_movement = check()
+        if more_movement == True:
+            gameplay()
+        else:
+            reset_movement(cohort_selection)
+            
+            global a
+            a = ea.enemy_tile_movement(enemy_army, gamemap, a)
+            mapdraw()
+            gameplay()
+            
+    elif(user_cohort[cohort_selection-1][6] == 0):
+        print("\n this cohort is out of moves, please select another cohort")
+        gameplay()
+
+
+# a sequence of if statements and loops. First remove the friendly units on the map, and based on the direction and 
+#movement speed, repaind the map
+def tile_movement(cohort_selection,movement,input_direction):
+    
+    #change all units tile back to grass or terrain
+    for i in range(user_cohort[cohort_selection-1][4]):
+        for j in range(user_cohort[cohort_selection-1][5]):
+            gamemap[50-user_cohort[cohort_selection-1][2]-i][user_cohort[cohort_selection-1][3]-j] = 0
+
+    #reimplement units onto gamemap with movement
+    if(input_direction == "up"):
+        for i in range(user_cohort[cohort_selection-1][4]):
+            for j in range(user_cohort[cohort_selection-1][5]):
+                gamemap[50-movement-i][user_cohort[cohort_selection-1][3]-j] = user_cohort[cohort_selection-1][1] 
+                
+        user_cohort[cohort_selection-1][2] = movement
+        
+    elif(input_direction == "down"):
+        for i in range(user_cohort[cohort_selection-1][4]):
+            for j in range(user_cohort[cohort_selection-1][5]):
+                gamemap[50-movement-i][user_cohort[cohort_selection-1][3]-j] = user_cohort[cohort_selection-1][1]
+                
+        user_cohort[cohort_selection-1][2] = movement
+        
+    elif(input_direction == "right"):
+        for i in range(user_cohort[cohort_selection-1][4]):
+            for j in range(user_cohort[cohort_selection-1][5]):
+                gamemap[50-user_cohort[cohort_selection-1][2]-i][movement-j] = user_cohort[cohort_selection-1][1]
+        user_cohort[cohort_selection-1][3] = movement
+    else:
+        for i in range(user_cohort[cohort_selection-1][4]):
+            for j in range(user_cohort[cohort_selection-1][5]):
+                gamemap[50-user_cohort[cohort_selection-1][2]-i][movement-j] = user_cohort[cohort_selection-1][1]
+                
+        user_cohort[cohort_selection-1][3] = movement
+        
+    mapdraw()
+    #update(cohort_selection,movement,input_direction)    
+    
+
+#reset the movements for all cohort on the board
+def reset_movement(cohort_selection):
+    print(len(user_cohort))
+    for i in range (len(user_cohort)):
+        user_cohort[i][6] = unit_list[user_cohort[i][1]-1][0]
+
+"""
+def update(cohort_selection,movement,input_direction):
+    
+    #for later purposes when updating the formation of the army after battle
+    #user_cohort[cohort_selection-1][4] = number_rows
+    #user_cohort[cohort_selection-1][5] = number_columns
+"""
+
+
+def message(message):
+    print(message)
+    
 
 #draws the current map (A)
 #This is the function that will be accessed frequently to refresh game map
@@ -233,14 +362,19 @@ def mapdraw():
     
     #draw army based on their assigned number
     #iterate the array (gamemap), then print out the number of that array onto each tile
+    #!! for z 6-10, z-5 is applied just so that on the map it can be represented by numbers 1-5, but in reality they are 6-10. (enemy)
     for (i, j), z in np.ndenumerate(gamemap[::-1]): 
-        if(z != 0 and z!= 6):
+        if(z == 6 or z == 7 or z == 8 or z == 9 or z == 10):
+            ax.text(j+(0.5), i+(0.5), '{}'.format(z-5), ha='center', va='center', size=12)
+        elif(z == 1 or z == 2 or z == 3 or z == 4 or z == 5):
             ax.text(j+(0.5), i+(0.5), '{}'.format(z), ha='center', va='center', size=12)
         
     # Add text box(A)
     plt.text(25, 25, display_text.message, fontsize=22, ha='center', va='center', bbox=dict(facecolor='white', alpha=0.5))
 
     plt.show()
+
+
 
 
 #function to show army we can use it wwhenever we awnt now
@@ -257,7 +391,7 @@ def showarmy():
 #this is a check funtion just so we don't have to rewerite the same thing over and over again
 #It will return true for yes and false for no so make sure you remeber this when you are using this function
 def check():
-    check = input("Enter y if yes      Enter n if no:\n")
+    check = input("\nEnter y if yes      Enter n if no:\n")
     if check == 'y':
         answer = True #
         return answer
@@ -268,7 +402,6 @@ def check():
         input("That is not a valid response...\nPress any button to continue...")
         check()
 
-    
 
 #Main Menu
 def Game_menu():
@@ -280,10 +413,11 @@ def Game_menu():
     startgame = check()
     if startgame == True:
         display_text.message = None
-        mapdraw()
         #These are the new functions to create the enemy army
         #To create the enemy army I made a new file for organization sake
         ea.enemy_selection(infantry, archers, cavalry, general, arty, enemy_army)
+        ea.enemy_formation1(enemy_army, gamemap)
+        mapdraw()
         ea.showarmy(enemy_army)
         
         unit_selection(infantry, archers, cavalry, general, arty)
